@@ -11,7 +11,7 @@ import asyncio
 from eltakobus.serial import RS485SerialInterfaceV2
 from eltakobus.message import ESP2Message, EltakoPoll
 
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant
@@ -23,7 +23,6 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import *
 from . import config_helpers
-
 
 async def async_get_base_ids_of_registered_gateway(device_registry: DeviceRegistry) -> list[str]:
     base_id_list = []
@@ -46,12 +45,10 @@ class EnOceanGateway:
     creating devices if needed, and dispatching messages to platforms.
     """
 
-    def __init__(self, general_settings:dict, hass: HomeAssistant, 
-                 dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None, 
-                 config_entry: ConfigEntry = None):
-
+    def __init__(self, general_settings:dict, hass: HomeAssistant,
+                dev_id: int, dev_type: GatewayDeviceType, serial_path: str, baud_rate: int, port: int, base_id: AddressExpression, dev_name: str, auto_reconnect: bool=True, message_delay:float=None, 
+                config_entry: ConfigEntry = None):
         """Initialize the Eltako gateway."""
-
         self._loop = asyncio.get_event_loop()
         self._bus_task = None
         self.baud_rate = baud_rate
@@ -80,43 +77,38 @@ class EnOceanGateway:
             self.native_protocol = 'ESP3'
         self._attr_dev_name = config_helpers.get_gateway_name(dev_name, dev_type.value, dev_id, base_id)
 
-        self._init_bus()
-
-        self._register_device()
-
+        self._bus = None
 
     def set_connection_state_changed_handler(self, handler):
         self._connection_state_handler = handler
         self._fire_connection_state_changed_event(self._bus.is_active())
 
-
     def _fire_connection_state_changed_event(self, status):
         if self._connection_state_handler:
-            self.hass.create_task(
-                self._connection_state_handler(status)
+            asyncio.run_coroutine_threadsafe(
+                self._connection_state_handler(status),
+                self._loop
             )
-
 
     def set_last_message_received_handler(self, handler):
         self._last_message_received_handler = handler
 
-
     def _fire_last_message_received_event(self):
         if self._last_message_received_handler:
-            self.hass.create_task(
-                self._last_message_received_handler( datetime.now(UTC).replace(tzinfo=pytz.UTC) )
+            asyncio.run_coroutine_threadsafe(
+                self._last_message_received_handler(datetime.now(UTC).replace(tzinfo=pytz.UTC)),
+                self._loop
             )
-
 
     def set_received_message_count_handler(self, handler):
         self._received_message_count_handler = handler
 
-
     def _fire_received_message_count_event(self):
         self._received_message_count += 1
         if self._received_message_count_handler:
-            self.hass.create_task(
-                self._received_message_count_handler( self._received_message_count ),
+            asyncio.run_coroutine_threadsafe(
+                self._received_message_count_handler(self._received_message_count),
+                self._loop
             )
 
     def process_messages(self, data=None):
@@ -124,36 +116,32 @@ class EnOceanGateway:
         self._fire_received_message_count_event()
         self._fire_last_message_received_event()
 
-    
     def _init_bus(self):
         self._received_message_count = 0
         self._fire_received_message_count_event()
 
         if GatewayDeviceType.is_esp2_gateway(self.dev_type):
             self._bus = RS485SerialInterfaceV2(self.serial_path, 
-                                               baud_rate=self.baud_rate, 
-                                               callback=self._callback_receive_message_from_serial_bus, 
-                                               delay_message=self._message_delay,
-                                               auto_reconnect=self._auto_reconnect)
+                                            baud_rate=self.baud_rate, 
+                                            callback=self._callback_receive_message_from_serial_bus, 
+                                            delay_message=self._message_delay,
+                                            auto_reconnect=self._auto_reconnect)
             
         elif GatewayDeviceType.is_lan_gateway(self.dev_type):
-            # lazy import to avoid preloading library
-            from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator
+            from esp2_gateway_adapter.esp3_tcp_com import TCP2SerialCommunicator  # noqa: PLC0415
             self._bus = TCP2SerialCommunicator(host=self.serial_path, 
-                                               port=self.port, 
-                                               callback=self._callback_receive_message_from_serial_bus, 
-                                               esp2_translation_enabled=True,
-                                               auto_reconnect=self._auto_reconnect)
+                                            port=self.port, 
+                                            callback=self._callback_receive_message_from_serial_bus, 
+                                            esp2_translation_enabled=True,
+                                            auto_reconnect=self._auto_reconnect)
         else:
-            # lazy import to avoid preloading library
-            from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator
+            from esp2_gateway_adapter.esp3_serial_com import ESP3SerialCommunicator  # noqa: PLC0415
             self._bus = ESP3SerialCommunicator(filename=self.serial_path, 
-                                               callback=self._callback_receive_message_from_serial_bus, 
-                                               esp2_translation_enabled=True, 
-                                               auto_reconnect=self._auto_reconnect)
+                                            callback=self._callback_receive_message_from_serial_bus, 
+                                            esp2_translation_enabled=True, 
+                                            auto_reconnect=self._auto_reconnect)
 
         self._bus.set_status_changed_handler(self._fire_connection_state_changed_event)
-
 
     def _register_device(self) -> None:
         device_registry = dr.async_get(self.hass)
@@ -168,25 +156,21 @@ class EnOceanGateway:
         
 
     ### address validation functions
-
     def validate_sender_id(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         if GatewayDeviceType.is_transceiver(self.dev_type):
             return self.sender_id_validation_by_transmitter(sender_id, device_name)
         elif GatewayDeviceType.is_bus_gateway(self.dev_type):
             return self.sender_id_validation_by_bus_gateway(sender_id, device_name)
         return False
-    
 
     def sender_id_validation_by_transmitter(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         result = config_helpers.compare_enocean_ids(self.base_id[0], sender_id[0])
         if not result:
             LOGGER.warn(f"{device_name} ({sender_id}): Maybe have wrong sender id configured!")
         return result
-    
 
     def sender_id_validation_by_bus_gateway(self, sender_id: AddressExpression, device_name: str = "") -> bool:
         return True # because no sender telegram is leaving the bus into wireless, only status update of the actuators and those ids are bease on the baseId.
-    
 
     def validate_dev_id(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         if GatewayDeviceType.is_transceiver(self.dev_type):
@@ -195,20 +179,19 @@ class EnOceanGateway:
             return self.dev_id_validation_by_bus_gateway(dev_id, device_name)
         return False
 
-
     def dev_id_validation_by_transmitter(self, dev_id: AddressExpression, device_name: str = "") -> bool:
+        if GatewayDeviceType.is_transceiver(self.dev_type):
+            return True
         result = 0xFF == dev_id[0][0]
         if not result:
             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
         return result
-    
 
     def dev_id_validation_by_bus_gateway(self, dev_id: AddressExpression, device_name: str = "") -> bool:
         result = config_helpers.compare_enocean_ids(b'\x00\x00\x00\x00', dev_id[0], len=2)
         if not result:
             LOGGER.warn(f"{device_name} ({dev_id}): Maybe have wrong device id configured!")
         return result
-    
 
     ### send and receive funtions for RS485 bus (serial bus)
     ### all events are looped through the HA event bus so that other automations can work with those events. History about events can aslo be created.
@@ -218,9 +201,10 @@ class EnOceanGateway:
         self._init_bus()
         self._bus.start()
 
-
     async def async_setup(self):
         """Initialized serial bus and register callback function on HA event bus."""
+        await self.hass.async_add_executor_job(self._init_bus)
+        self._register_device()
         self._bus.start()
         LOGGER.debug("[Gateway] [Id: %d] Was started.", self.dev_id)
 
@@ -237,7 +221,6 @@ class EnOceanGateway:
         # only to react on them.
         service_name = f"gateway_{self._attr_dev_id}_send_message"
         self.hass.services.async_register(DOMAIN, service_name, self.async_service_send_message)
-
 
     # Command Section
     async def async_service_send_message(self, event, raise_exception=False) -> None:
@@ -282,58 +265,80 @@ class EnOceanGateway:
             if raise_exception:
                 raise e
 
-
-
     def send_message(self, msg: ESP2Message):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
 
-
     def unload(self):
         """Disconnect callbacks established at init time."""
         if self.dispatcher_disconnect_handle:
             self._bus.stop()
-            self._bus.join()
+            # bus.join() blockiert den Event-Loop - entfernt!
             LOGGER.debug("[Gateway] [Id: %d] Was stopped.", self.dev_id)
             self.dispatcher_disconnect_handle()
             self.dispatcher_disconnect_handle = None
 
-
     def _callback_send_message_to_serial_bus(self, msg):
-        """Callback method call from HA when receiving events from serial bus."""
-        if self._bus.is_active():
-            if isinstance(msg, ESP2Message):
-                LOGGER.debug("[Gateway] [Id: %d] Send message: %s - Serialized: %s", self.dev_id, msg, msg.serialize().hex())
-
-                # put message on serial bus
-                self.hass.create_task(
-                    self._bus.send(msg)
+        try:
+            if not self._bus.is_active():
+                LOGGER.warning(
+                    "[Gateway] [Id: %d] Serial port %s ist nicht verfügbar! Nachricht (%s) wurde nicht gesendet.",
+                    self.dev_id, self.serial_path, msg,
                 )
-        else:
-            LOGGER.warn("[Gateway] [Id: %d] Serial port %s is not available!!! message (%s) was not sent.", self.dev_id, self.serial_path, msg)
+                return
 
+            if not isinstance(msg, ESP2Message):
+                return
 
+            # serialize().hex() nur berechnen, wenn wirklich geloggt wird
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                LOGGER.debug(
+                    "[Gateway] [Id: %d] Send message: %s - Serialized: %s",
+                    self.dev_id, msg, msg.serialize().hex(),
+                )
+
+            asyncio.run_coroutine_threadsafe(self._bus.send(msg), self._loop)
+
+        except Exception:
+            LOGGER.error(
+                "[Gateway] [Id: %d] Fehler beim Senden - Nachricht verworfen.",
+                self.dev_id, exc_info=True,
+            )
+    
     def _callback_receive_message_from_serial_bus(self, message):
-        """Handle Eltako device's callback.
+        # Ein einzelnes fehlerhaftes Telegramm darf NIEMALS den Empfangs-Thread beenden.
+        try:
+            if type(message) in [EltakoPoll]:
+                return
 
-        This is the callback function called by python-enocan whenever there
-        is an incoming message.
-        """
-
-        if type(message) not in [EltakoPoll]:
             LOGGER.debug("[Gateway] [Id: %d] Received message: %s", self.dev_id, message)
-            self.process_messages()
+            # process_messages ruft hass.create_task auf - muss im Event-Loop laufen!
+            self._loop.call_soon_threadsafe(self.process_messages)
 
-            if isinstance(message, ESP2Message):
-                event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE)
-                dispatcher_send(self.hass, event_id, message)
-            
+            if not isinstance(message, ESP2Message):
+                return
+
+            # Nur adressbehaftete Telegramme adress-spezifisch dispatchen.
+            # Basis-ESP2Message (ACK/Response/Base-ID) hat kein .address -> überspringen.
+            address = getattr(message, "address", None)
+            if address is None:
+                return
+
+            addr_str = b2s(address)
+            event_id = config_helpers.get_bus_event_type(self.base_id, SIGNAL_RECEIVE_MESSAGE) + f".{addr_str}"
+            dispatcher_send(self.hass, event_id, message)
+
+        except Exception:
+            LOGGER.error(
+                "[Gateway] [Id: %d] Fehler bei empfangenem Telegramm - verworfen, Thread bleibt aktiv.",
+                self.dev_id, exc_info=True,
+            )
+
     @property
     def unique_id(self) -> str:
         """Return the unique id of the gateway."""
         return self.serial_path
-    
 
     @property
     def serial_path(self) -> str:

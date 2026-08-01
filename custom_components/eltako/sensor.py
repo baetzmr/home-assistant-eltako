@@ -9,6 +9,7 @@ from eltakobus.eep import *
 from eltakobus.message import ESP2Message
 
 from . import config_helpers
+from . import eep_smoke  # registriert F6-05-02
 
 
 from homeassistant.components.sensor import (
@@ -425,10 +426,12 @@ async def async_setup_entry(
     entities.append(GatewayLastReceivedMessage(platform, gateway))
     entities.append(GatewayReceivedMessagesInActiveSession(platform, gateway))
 
-    validate_actuators_dev_and_sender_id(entities)
+    # Gateway-Info-Entities von der Validierung ausschließen
+    actuator_entities = [e for e in entities if not isinstance(e, (GatewayInfoField, GatewayLastReceivedMessage, GatewayReceivedMessagesInActiveSession, StaticInfoField, EventListenerInfoField))
+                         and e.dev_id != gateway.base_id]
+    validate_actuators_dev_and_sender_id(actuator_entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
-
 
 class EltakoSensor(EltakoEntity, RestoreEntity, SensorEntity):
     """Representation of an  Eltako sensor device such as a power meter."""
@@ -905,11 +908,9 @@ class GatewayReceivedMessagesInActiveSession(EltakoSensor):
                          description=EltakoSensorEntityDescription(
                             key="Received Messages per Session",
                             name="Received Messages per Session",
-                            state_class=SensorStateClass.TOTAL_INCREASING,
+                            state_class=SensorStateClass.MEASUREMENT,
                             # device_class=SensorDeviceClass.VOLUME,
                             # native_unit_of_measurement="Messages", # => raises error message
-                            unit_of_measurement="Messages",
-                            suggested_unit_of_measurement="Messages",
                             icon="mdi:chart-line",
                         )
         )

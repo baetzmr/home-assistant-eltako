@@ -68,7 +68,9 @@ async def async_setup_entry(
     # add reconnect button for gateway
     entities.append(GatewayReconnectButton(platform, gateway))
 
-    validate_actuators_dev_and_sender_id(entities)
+    # GatewayReconnectButton von der Validierung ausschließen
+    actuator_entities = [e for e in entities if not isinstance(e, GatewayReconnectButton)]
+    validate_actuators_dev_and_sender_id(actuator_entities)
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
@@ -117,8 +119,11 @@ class GatewayReconnectButton(AbstractButton):
             icon="mdi:button-pointer",
             device_class=ButtonDeviceClass.UPDATE,
         )
-
         super().__init__(platform, gateway, gateway.base_id, gateway.dev_name, None)
+
+    async def async_added_to_hass(self) -> None:
+        """Kein Bus-Listener nötig."""
+        pass
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -133,4 +138,4 @@ class GatewayReconnectButton(AbstractButton):
 
     async def async_press(self) -> None:
         """Reconnect serial bus"""
-        self.gateway.reconnect()
+        await self.hass.async_add_executor_job(self.gateway.reconnect)

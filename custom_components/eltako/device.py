@@ -2,7 +2,7 @@
 from datetime import datetime
 
 from eltakobus.message import ESP2Message, EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular4BSMessage, Regular1BSMessage
-from eltakobus.util import AddressExpression
+from eltakobus.util import AddressExpression, b2s
 from eltakobus.eep import EEP
 
 from homeassistant.core import HomeAssistant, State
@@ -25,7 +25,7 @@ class EltakoEntity(Entity):
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None, description_key:str=None):
         """Initialize the device."""
         self._attr_has_entity_name = True
-        self._attr_should_poll = True
+        self._attr_should_poll = False
 
         self._attr_ha_platform = platform
         self._attr_gateway = gateway
@@ -80,12 +80,14 @@ class EltakoEntity(Entity):
         await super().async_added_to_hass()
         
         # Register callbacks.
-        event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE)
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass, event_id, self._message_received_callback
+        for addr in self.listen_to_addresses:
+            addr_str = b2s(addr)
+            event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_RECEIVE_MESSAGE) + f".{addr_str}"
+            self.async_on_remove(
+                async_dispatcher_connect(
+                    self.hass, event_id, self._message_received_callback
+                )
             )
-        )
 
         # load initial value
         if isinstance(self, RestoreEntity):
@@ -104,7 +106,7 @@ class EltakoEntity(Entity):
 
     def load_value_initially(self, latest_state:State):
         """This function is implemented in the concrete devices classes"""
-        LOGGER.warn(f"[{self._attr_ha_platform} {self.dev_id}] DOES NOT HAVE AN IMPLEMENTATION FOR: load_value_initially()")
+        LOGGER.warning(f"[{self._attr_ha_platform} {self.dev_id}] DOES NOT HAVE AN IMPLEMENTATION FOR: load_value_initially()")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
         
@@ -159,14 +161,9 @@ class EltakoEntity(Entity):
         return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
 
     def _message_received_callback(self, msg: ESP2Message) -> None:
-        """Handle incoming messages."""
-        
         msg_types = [EltakoWrappedRPS, EltakoWrapped1BS, EltakoWrapped4BS, RPSMessage, Regular1BSMessage, Regular4BSMessage]
-
         if type(msg) in msg_types:
-            if msg.address in self.listen_to_addresses:
-                self.value_changed(msg)
-
+            self.value_changed(msg)
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the device when a message arrives."""

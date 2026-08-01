@@ -17,7 +17,9 @@ DEFAULT_GENERAL_SETTINGS = {
 
 class DeviceConf(dict):
     """Object representation of config."""
-    def __init__(self, config: ConfigType, extra_keys:list[str]=[]):
+    def __init__(self, config: ConfigType, extra_keys:list[str]=None):
+        if extra_keys is None:
+            extra_keys = []
         # merge everything into dict
         self.update(config)
         
@@ -54,16 +56,22 @@ class DeviceConf(dict):
     def get(self, key: str, default = None):
         return super().get(key, default)
 
-def get_device_conf(config: ConfigType, key: str, extra_keys:list[str]=[]) -> DeviceConf:
+def get_device_conf(config: ConfigType, key: str, extra_keys:list[str]=None) -> DeviceConf:
+    if extra_keys is None:
+        extra_keys = []
     if config is not None:
         if key in config.keys():
             return DeviceConf(config.get(key), extra_keys)
     return None
 
 def get_general_settings_from_configuration(hass: HomeAssistant) -> dict:
-    settings = DEFAULT_GENERAL_SETTINGS
+    # Start from a fresh copy of the defaults so that the module-level
+    # DEFAULT_GENERAL_SETTINGS can never be mutated by callers. Using update()
+    # also guarantees that every default key is always present, even when the
+    # user only overrides a subset in the configuration.
+    settings = dict(DEFAULT_GENERAL_SETTINGS)
     if hass and CONF_GERNERAL_SETTINGS in hass.data[DATA_ELTAKO][ELTAKO_CONFIG]:
-        settings = hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS]
+        settings.update(hass.data[DATA_ELTAKO][ELTAKO_CONFIG][CONF_GERNERAL_SETTINGS])
     
     # LOGGER.debug(f"General Settings: {settings}")
 
@@ -124,12 +132,16 @@ def get_device_config(config: dict, id: int) -> dict:
                 return {}
     return None
 
-async def async_get_list_of_gateway_descriptions(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config, filter_out: list[str]=[]) -> dict:
+async def async_get_list_of_gateway_descriptions(hass: HomeAssistant, CONFIG_SCHEMA: dict, get_integration_config=async_integration_yaml_config, filter_out: list[str]=None) -> dict:
+    if filter_out is None:
+        filter_out = []
     config = await async_get_home_assistant_config(hass, CONFIG_SCHEMA, get_integration_config)
     return get_list_of_gateway_descriptions(config, filter_out)
 
-def get_list_of_gateway_descriptions(config: dict, filter_out: list[str]=[]) -> dict:
+def get_list_of_gateway_descriptions(config: dict, filter_out: list[str]=None) -> dict:
     """Compiles a list of all gateways in config."""
+    if filter_out is None:
+        filter_out = []
     result = {}
     if CONF_GATEWAY in config:
         for g in config[CONF_GATEWAY]:

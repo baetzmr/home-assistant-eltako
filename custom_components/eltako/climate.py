@@ -139,9 +139,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         self._attr_max_temp = max_temp
         self._attr_min_temp = min_temp
 
-        self._loop = asyncio.get_event_loop()
-        self._update_task = asyncio.ensure_future(self._wrapped_update(), loop=self._loop)
-
+        self._update_task = None
 
     def load_value_initially(self, latest_state:State):
         # LOGGER.debug(f"[climate {self.dev_id}] eneity unique_id: {self.unique_id}")
@@ -317,19 +315,15 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
 
     def value_changed(self, msg: ESP2Message) -> None:
-        """Update the internal state of this device."""
-
         climate_address, _ = self.dev_id
+        thermostat_address = self.thermostat.id[0] if self.thermostat else None
+
         if msg.address == climate_address:
-            LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by actuator: {self.dev_id}")
+            LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by actuator")
             self.change_temperature_values(msg)
-
-        if self.thermostat:
-            thermostat_address, _ = self.thermostat.id
-            if msg.address == thermostat_address:
-                LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat: {self.thermostat.id}")
-                self.change_temperature_values(msg)
-
+        elif thermostat_address and msg.address == thermostat_address:
+            LOGGER.debug(f"[climate {self.dev_id}] Change state triggered by thermostat")
+            self.change_temperature_values(msg)
         # Implemented via eventing: async_handle_event
         # if self.cooling_switch:
         #     if msg.address == self.cooling_switch.id[0]:
@@ -358,7 +352,19 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 self._attr_hvac_mode = self._hvac_mode_from_heating
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
-                # show target temp in 0.5 steps
-                self._attr_target_temperature =  round( 2*decoded.target_temperature, 0)/2 
+                self._attr_target_temperature = round(2*decoded.target_temperature, 0)/2 
 
         self.schedule_update_ha_state()
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._update_task = self.hass.async_create_task(self._wrapped_update())
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Stop update task when entity is removed."""
+        if self._update_task and not self._update_task.done():
+            self._update_task.cancel()
+            try:
+                await self._update_task
+            except asyncio.CancelledError:
+                pass

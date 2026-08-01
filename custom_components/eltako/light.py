@@ -59,7 +59,7 @@ async def async_setup_entry(
 
 class AbstractLightEntity(EltakoEntity, LightEntity, RestoreEntity):
 
-    def load_value_initially(self, latest_state:State):
+    def load_value_initially(self, latest_state: State):
         # LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
         # LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
         try:
@@ -71,11 +71,21 @@ class AbstractLightEntity(EltakoEntity, LightEntity, RestoreEntity):
                 else:
                     self._attr_is_on = None
 
-                self._attr_brightness = latest_state.attributes.get('brightness', None)
+                # Helligkeit auslesen
+                old_brightness = latest_state.attributes.get('brightness', None)
+                
+                # Fallback-Logik: Wenn kein Helligkeitswert im Attribut ist
+                if old_brightness is not None:
+                    self._attr_brightness = old_brightness
+                else:
+                    # Falls die Lampe an ist, aber kein Wert da ist -> 255 (100%)
+                    # Falls sie aus ist, lassen wir None (bzw. 0), damit HA nicht verwirrt wird
+                    self._attr_brightness = 255 if self._attr_is_on else None
                 
         except Exception as e:
             self._attr_is_on = None
-            raise e
+            self._attr_brightness = None
+            # raise e
         
         self.schedule_update_ha_state()
 
@@ -122,7 +132,7 @@ class EltakoDimmableLight(AbstractLightEntity):
             self.send_message(released_msg)
 
         else:
-            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
             return
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
@@ -157,7 +167,7 @@ class EltakoDimmableLight(AbstractLightEntity):
             self.send_message(released_msg)
 
         else:
-            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
             return
             
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
@@ -177,6 +187,9 @@ class EltakoDimmableLight(AbstractLightEntity):
                 decoded:A5_38_08 = self.dev_eep.decode_message(msg)
             elif msg.org == 0x05:
                 LOGGER.debug("[Dimmable Light] Ignore on/off message with org=0x05")
+                return
+            else:
+                LOGGER.debug("[Dimmable Light] Ignore message with unexpected org=%s", str(msg.org))
                 return
 
         except Exception as e:
@@ -205,7 +218,7 @@ class EltakoDimmableLight(AbstractLightEntity):
             self.schedule_update_ha_state()
 
         else:
-            LOGGER.warn("[%s %s] Device EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self.dev_eep.eep_string)
+            LOGGER.warning("[%s %s] Device EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self.dev_eep.eep_string)
 
 
 class EltakoSwitchableLight(AbstractLightEntity):
@@ -247,7 +260,7 @@ class EltakoSwitchableLight(AbstractLightEntity):
             self.send_message(released_msg)
 
         else:
-            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
             return
 
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
@@ -281,7 +294,7 @@ class EltakoSwitchableLight(AbstractLightEntity):
             self.send_message(released_msg)
 
         else:
-            LOGGER.warn("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
+            LOGGER.warning("[%s %s] Sender EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self._sender_eep.eep_string)
             return
         
         if self.general_settings[CONF_FAST_STATUS_CHANGE]:
@@ -302,4 +315,4 @@ class EltakoSwitchableLight(AbstractLightEntity):
             self.schedule_update_ha_state()
 
         else:
-            LOGGER.warn("[%s %s] Device EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self.dev_eep.eep_string)
+            LOGGER.warning("[%s %s] Device EEP %s not supported.", Platform.LIGHT, str(self.dev_id), self.dev_eep.eep_string)
