@@ -1,3 +1,23 @@
+> ## ℹ️ Fork von baetzmr
+>
+> Dies ist ein **gepatchter Fork** von [grimmpp/home-assistant-eltako](https://github.com/grimmpp/home-assistant-eltako)
+> auf Basis von `v1.5.10-bugfix-covers`. Er ist im Dauerbetrieb mit FGW14-USB und USB300 unter HA Core 2026.x im Einsatz.
+>
+> **Wichtigste Änderungen:** AFRISO-ASD20-Rauchmelder (F6-05-02) · Piotek-Tracker (A5-07-01) ·
+> überarbeitete Rollladen-Logik mit optimistischem Endzustand · Gateway-Thread-Schutz und thread-sichere
+> Event-Loop-Aufrufe · adressbezogene Event-Verteilung · `via_device_id` und weitere Anpassungen an aktuelle HA-Versionen
+>
+> 📄 **Alle Änderungen im Detail:** [FORK_CHANGES.md](FORK_CHANGES.md)
+> 🔧 **Bibliotheks-Patches (für den stabilen Betrieb notwendig):** [scripts/README.md](scripts/README.md)
+>
+> **Installation über HACS:** *HACS → ⋮ → Benutzerdefinierte Repositories* →
+> `https://github.com/baetzmr/home-assistant-eltako`, Typ **Integration**. Die Domain bleibt `eltako`,
+> eine bestehende Konfiguration wird übernommen. Die Original-Integration vorher in HACS entfernen.
+>
+> Die folgende Dokumentation stammt aus dem Original-Repository.
+
+---
+
 [![Generic badge](https://img.shields.io/badge/HACS-Custom-3498db.svg)](https://github.com/hacs/integration)
 [![Generic badge](https://img.shields.io/github/commit-activity/y/grimmpp/home-assistant-eltako.svg?style=flat&color=3498db)](https://github.com/grimmpp/home-assistant-eltako/commits/main)
 [![Generic badge](https://img.shields.io/badge/Community-Forum-3498db.svg)](https://community.home-assistant.io/)
