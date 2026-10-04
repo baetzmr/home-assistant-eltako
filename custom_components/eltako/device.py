@@ -20,8 +20,8 @@ from . import config_helpers
 
 class EltakoEntity(Entity):
     """Parent class for all entities associated with the Eltako component."""
-    
-    
+
+
     def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name: str="Device", dev_eep: EEP=None, description_key:str=None):
         """Initialize the device."""
         self._attr_has_entity_name = True
@@ -58,7 +58,7 @@ class EltakoEntity(Entity):
         if hasattr(self, 'entity_description') and self.entity_description is not None:
             if self.description_key is None:
                 self.description_key = self.entity_description.key
-                
+
         return self.description_key
 
     @property
@@ -71,14 +71,14 @@ class EltakoEntity(Entity):
             name=self.dev_name,
             manufacturer=MANUFACTURER,
             model=self.dev_eep.eep_string,
-            via_device=(DOMAIN, self.gateway.serial_path),
+            via_device_id=self.gateway.device_id,
         )
-    
+
 
     async def async_added_to_hass(self) -> None:
         """Call when entity about to be added to hass."""
         await super().async_added_to_hass()
-        
+
         # Register callbacks.
         for addr in self.listen_to_addresses:
             addr_str = b2s(addr)
@@ -109,14 +109,14 @@ class EltakoEntity(Entity):
         LOGGER.warning(f"[{self._attr_ha_platform} {self.dev_id}] DOES NOT HAVE AN IMPLEMENTATION FOR: load_value_initially()")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - state: {latest_state.state}")
         LOGGER.debug(f"[{self._attr_ha_platform} {self.dev_id}] latest state - attributes: {latest_state.attributes}")
-        
+
 
     def validate_dev_id(self) -> bool:
         return self.gateway.validate_dev_id(self.dev_id, self.dev_name)
 
 
     def validate_sender_id(self, sender_id=None) -> bool:
-        
+
         if sender_id is None:
             if hasattr(self, "sender_id"):
                 sender_id = self.sender_id
@@ -134,12 +134,12 @@ class EltakoEntity(Entity):
     def dev_eep(self):
         """Return the eep of device."""
         return self._attr_dev_eep
-    
+
     @property
     def dev_id(self) -> AddressExpression:
         """Return the id of device."""
         return self._attr_dev_id
-    
+
     @property
     def gateway(self) -> EnOceanGateway:
         """Return the supporting gateway of device."""
@@ -154,7 +154,7 @@ class EltakoEntity(Entity):
     # def identifier(self) -> str:
     #     """Return the identifier of device."""
     #     return EltakoEntity._get_identifier(self.gateway, self.dev_id, self.description_key)
-    
+
     @property
     def unique_id(self) -> str:
         """Return the unique id of device"""
@@ -167,12 +167,12 @@ class EltakoEntity(Entity):
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the device when a message arrives."""
-    
+
     def send_message(self, msg: ESP2Message):
         """Put message on RS485 bus. First the message is put onto HA event bus so that other automations can react on messages."""
         event_id = config_helpers.get_bus_event_type(self.gateway.base_id, SIGNAL_SEND_MESSAGE)
         dispatcher_send(self.hass, event_id, msg)
-        
+
 
 def validate_actuators_dev_and_sender_id(entities:list[EltakoEntity]):
     """Only call it for actuators."""

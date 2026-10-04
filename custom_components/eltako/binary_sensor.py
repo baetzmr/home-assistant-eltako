@@ -29,9 +29,9 @@ async def async_setup_entry(
     """Set up the Binary Sensor platform for Eltako."""
     gateway: EnOceanGateway = get_gateway_from_hass(hass, config_entry)
     config: ConfigType = get_device_config_for_gateway(hass, config_entry, gateway)
-    
+
     entities: list[EltakoEntity] = []
-    
+
     platform = Platform.BINARY_SENSOR
 
     for platform_id in [Platform.BINARY_SENSOR, Platform.SENSOR]:
@@ -42,55 +42,55 @@ async def async_setup_entry(
                     if dev_conf.eep.eep_string in CONF_EEP_SUPPORTED_BINARY_SENSOR:
                         if dev_conf.eep == A5_30_03:
                             name = "Digital Input 0"
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="0", name=name) ))
                             name = "Digital Input 1"
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="1", name=name) ))
                             name = "Digital Input 2"
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="2", name=name) ))
                             name = "Digital Input 3"
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="3", name=name) ))
                             name = "Status of Wake"
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="wake", name=name) ))
                         elif dev_conf.eep == A5_30_01:
                             name = "Digital Input"
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="0", name=name) ))
                             name = "Low Battery"
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL),
                                                                 EntityDescription(key="low_battery", name=name) ))
                         # --- AB HIER NEU: UNSERE PRO-WEICHE FÜR DEN PIOTEK TRACKER ---
                         elif dev_conf.eep == A5_07_01:
                             base_name = dev_conf.name if dev_conf.name else "Piotek Tracker"
-                            
+
                             # 1. Die Präsenz-Entität (mit Auto-Off Timer)
                             p_name = f"{base_name} Anwesenheit"
                             entities.append(EltakoTrackerPresence(
-                                platform_id, gateway, dev_conf.id, p_name, dev_conf.eep, 
+                                platform_id, gateway, dev_conf.id, p_name, dev_conf.eep,
                                 "presence", dev_conf.get(CONF_INVERT_SIGNAL),
                                 EntityDescription(key="presence", name=p_name)
                             ))
-                            
+
                             # 2. Die Button-Entität (reagiert nur auf RPS-Knopfdruck)
                             b_name = f"{base_name} Button"
                             entities.append(EltakoTrackerButton(
-                                platform_id, gateway, dev_conf.id, b_name, dev_conf.eep, 
+                                platform_id, gateway, dev_conf.id, b_name, dev_conf.eep,
                                 None, dev_conf.get(CONF_INVERT_SIGNAL),
                                 EntityDescription(key="button", name=b_name)
                             ))
                         # --- ENDE NEUER CODEWECHSEL ---
-                        
+
                         # --- AFRISO ASD20 Rauchmelder (F6-05-02) ---
                         elif dev_conf.eep.eep_string == "F6-05-02":
                             base_name = dev_conf.name if dev_conf.name else "Rauchmelder"
@@ -119,9 +119,9 @@ async def async_setup_entry(
                                 EntityDescription(key="online", name=o_name)
                             ))
                         # --- ENDE AFRISO ASD20 ---
-                        
+
                         else:
-                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep, 
+                            entities.append(EltakoBinarySensor(platform_id, gateway, dev_conf.id, dev_conf.name, dev_conf.eep,
                                                                 dev_conf.get(CONF_DEVICE_CLASS), dev_conf.get(CONF_INVERT_SIGNAL)))
 
                 except Exception as e:
@@ -135,7 +135,7 @@ async def async_setup_entry(
     log_entities_to_be_added(entities, platform)
     async_add_entities(entities)
 
-    
+
 class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
 
     def load_value_initially(self, latest_state:State):
@@ -147,11 +147,11 @@ class AbstractBinarySensor(EltakoEntity, RestoreEntity, BinarySensorEntity):
                     self._attr_is_on = 'on' == latest_state.state
                 else:
                     self._attr_is_on = None
-                
+
         except Exception as e:
             self._attr_is_on = None
             raise e
-        
+
         self.schedule_update_ha_state()
 
         LOGGER.debug(f"[{Platform.BINARY_SENSOR} {self.dev_id}] value initially loaded: [is_on: {self.is_on}, state: {self.state}]")
@@ -166,7 +166,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
     - D5-00-01
     """
 
-    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP, 
+    def __init__(self, platform: str, gateway: EnOceanGateway, dev_id: AddressExpression, dev_name:str, dev_eep: EEP,
                  device_class: str, invert_signal: bool, description: EntityDescription=None):
         """Initialize the Eltako binary sensor."""
         if description:
@@ -190,7 +190,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
                 self._attr_device_class = BinarySensorDeviceClass.WINDOW
             if dev_eep in [F6_10_00]:
                 self._attr_device_class = BinarySensorDeviceClass.WINDOW
-            
+
 
     def value_changed(self, msg: ESP2Message):
         """Fire an event with the data that have changed.
@@ -204,11 +204,11 @@ class EltakoBinarySensor(AbstractBinarySensor):
         - button released
             ['0xf6', '0x00', '0x00', '0x2d', '0xcf', '0x45', '0x20']
         """
-        
+
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[%s %s] Could not decode message for eep %s does not fit to message type %s (org %s)", 
+            LOGGER.warning("[%s %s] Could not decode message for eep %s does not fit to message type %s (org %s)",
                             Platform.BINARY_SENSOR, str(self.dev_id), self.dev_eep.eep_string, type(msg).__name__, str(msg.org) )
             return
 
@@ -227,7 +227,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
             fa = decoded.rocker_first_action
             sa = decoded.rocker_second_action
 
-            # Data is only available when button is pressed. 
+            # Data is only available when button is pressed.
             # Button cannot be identified when releasing it.
             # if at least one button is pressed
             if pressed:
@@ -265,7 +265,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
                     "rocker_first_action": decoded.rocker_first_action,
                     "rocker_second_action": decoded.rocker_second_action,
                 }
-            
+
             LOGGER.debug("[%s %s] Send event: %s, pressed_buttons: '%s'", Platform.BINARY_SENSOR, str(self.dev_id), event_id, json.dumps(pressed_buttons))
             self.hass.bus.fire(event_id, event_data)
 
@@ -287,12 +287,12 @@ class EltakoBinarySensor(AbstractBinarySensor):
             # Show status change in HA. It will only for the moment when the button is pushed down.
             if not self.invert_signal:
                 self._attr_is_on = len(pressed_buttons) > 0
-            else: 
+            else:
                 self._attr_is_on = not ( len(pressed_buttons) > 0 )
             self.schedule_update_ha_state()
 
             return
-        
+
         elif self.dev_eep in [F6_01_01]:
 
             # fire event
@@ -306,11 +306,11 @@ class EltakoBinarySensor(AbstractBinarySensor):
                 }
             LOGGER.debug("[%s %s] Send event: %s, pushed down: %s", Platform.BINARY_SENSOR, str(self.dev_id), event_id, str(decoded.button_pushed))
             self.hass.bus.fire(event_id, event_data)
-            
+
             # Show status change in HA. It will only for the moment when the button is pushed down.
             if not self.invert_signal:
                 self._attr_is_on = decoded.button_pushed
-            else: 
+            else:
                 self._attr_is_on = not ( decoded.button_pushed )
             self.schedule_update_ha_state()
 
@@ -318,7 +318,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
 
         elif self.dev_eep in [F6_10_00]:
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
-            
+
             # is_on == True => open
             self._attr_is_on = decoded.handle_position > 0
 
@@ -330,7 +330,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
             # learn button: 0=pressed, 1=not pressed
             if decoded.learn_button == 0:
                 return
-            
+
             # contact: 0=open, 1=closed
             if not self.invert_signal:
                 self._attr_is_on = decoded.contact == 0
@@ -342,7 +342,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
             # LOGGER.debug("[Binary Sensor][%s] Received msg for processing eep %s telegram.", b2s(self.dev_id[0]), self.dev_eep.eep_string)
             if decoded.learn_button == 0:
                 return
-                
+
             self._attr_is_on = decoded.pir_status == 1
 
             if self.invert_signal:
@@ -387,7 +387,7 @@ class EltakoBinarySensor(AbstractBinarySensor):
         else:
             LOGGER.warning("[%s %s] EEP %s not found for data processing.", Platform.BINARY_SENSOR, str(self.dev_id), self.dev_eep.eep_string)
             return
-        
+
         self.schedule_update_ha_state()
 
         if self.is_on:
@@ -428,16 +428,15 @@ class GatewayConnectionState(AbstractBinarySensor):
             name= self.gateway.dev_name,
             manufacturer=MANUFACTURER,
             model=self.gateway.model,
-            via_device=(DOMAIN, self.gateway.serial_path)
         )
-    
+
     async def async_value_changed(self, connected:bool) -> None:
         try:
             self.value_changed(connected)
         except AttributeError as e:
             # Home Assistant is not ready yet
             pass
-    
+
     def value_changed(self, connected: bool) -> None:
         """Update the current value."""
         LOGGER.debug("[%s] [Gateway Id %s] connected %s", Platform.BINARY_SENSOR, str(self.gateway.dev_id), str(connected) )
@@ -491,7 +490,7 @@ class EltakoTrackerButton(EltakoBinarySensor):
         """Läuft absolut thread-sicher im Haupt-Thread von Home Assistant."""
         if not hasattr(msg, 'org') or msg.org != 0x05:
             return
-        
+
         if hasattr(msg, 'data') and msg.data:
             data_byte = msg.data[0] if isinstance(msg.data, (bytes, bytearray)) else None
             # 0x70 = Button gedrückt -> True | 0x00 = Losgelassen -> False
