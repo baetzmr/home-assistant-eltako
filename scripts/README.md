@@ -9,7 +9,7 @@ Die Eltako-Integration nutzt drei Python-Bibliotheken, die Home Assistant anhand
 | `esp2-gateway-adapter` | 0.2.15 | ESP3-Gateways wie USB300 (übersetzt ESP3 ↔ ESP2) |
 | `enocean` | ≥ 0.60.1 | EEP-Definitionen |
 
-Einige Fehler sitzen in diesen Bibliotheken und nicht in der Integration selbst. HACS
+Einige Fehler sitzen in diesen Bibliotheken und nicht in der Integration selbst. Der Marketplace
 kann sie deshalb nicht mit ausliefern. Außerdem installiert HA die Bibliotheken bei
 **jedem Core-Update neu**, wodurch manuelle Änderungen verloren gehen.
 `patch_libraries.sh` wendet die Korrekturen automatisch wieder an.
@@ -22,15 +22,15 @@ kann sie deshalb nicht mit ausliefern. Außerdem installiert HA die Bibliotheken
 | 2 | `esp2_gateway_adapter/esp3_serial_com.py` | `hasattr(packet, "response")`-Guard vor zwei `elif`-Zweigen | Pakete ohne `.response` lösen einen `AttributeError` aus. Danach ist der **USB300-Empfangsthread tot** und das Gateway empfängt nichts mehr. |
 | 3 | `enocean/protocol/eep.py` | `XMLParsedAsHTMLWarning` wird unterdrückt | Rein kosmetisch, entfernt eine wiederkehrende Warnung im Log. |
 | 4 | `eltakobus/serial.py` | `write_timeout=0.1` → `0.5` | Bei vielen Telegrammen kurz hintereinander (z. B. Lichtgruppen) laufen **Schreibvorgänge sonst in Timeouts**. |
-| 5 | *optional, Standard aus* | Integrationsdateien aus `/config/eltako_patches/` wiederherstellen | Nur für Installationen **ohne HACS**. Siehe Warnung unten. |
+| 5 | *optional, Standard aus* | Integrationsdateien aus `/config/eltako_patches/` wiederherstellen | Nur für Installationen **ohne Marketplace**. Siehe Warnung unten. |
 
 Das Skript ist **idempotent**: Schon gepatchte Stellen erkennt es und überspringt sie.
 Ist eine Zieldatei nicht vorhanden (z. B. weil eine Bibliothek in einer neuen Version
 umgebaut wurde), meldet es einen Fehler, statt still „bereits gepatcht“ auszugeben.
 
-> ⚠️ **Fix 5 und HACS:** Wer die Integration über HACS installiert, bekommt die gepatchten
+> ⚠️ **Fix 5 und Marketplace:** Wer die Integration über den Marketplace installiert, bekommt die gepatchten
 > Integrationsdateien mit dem Release. Fix 5 muss dann **aus** bleiben (Standard). Sonst
-> überschreibt das Skript nach jedem HACS-Update die neuen Dateien mit den alten
+> überschreibt das Skript nach jedem Marketplace-Update die neuen Dateien mit den alten
 > Master-Kopien. Aktivieren nur bei manueller Installation:
 > `RESTORE_INTEGRATION=1 bash /config/patch_libraries.sh`
 
@@ -95,7 +95,7 @@ site-packages: /usr/local/lib/python3.14/site-packages
 ✓ esp2_gateway_adapter esp3_serial_com.py gepatcht
 - enocean eep.py bereits gepatcht
 ✓ eltakobus serial.py write_timeout erhöht
-- Fix 5 (Integration aus Master wiederherstellen) deaktiviert – Integration kommt über HACS
+- Fix 5 (Integration aus Master wiederherstellen) deaktiviert – Integration kommt über den Marketplace
 === Patches abgeschlossen ===
 >>> Es wurden Dateien geändert – sie greifen erst nach einem weiteren 'ha core restart'!
 ```

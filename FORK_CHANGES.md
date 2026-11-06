@@ -199,7 +199,7 @@ sauber zwischen Aktor und Thermostat).
 ## 7. Bibliotheks-Patches (patch_libraries.sh)
 
 Einige Fehler liegen nicht in der Integration, sondern in den von HA installierten
-Bibliotheken `eltakobus`, `esp2_gateway_adapter` und `enocean`. HACS kann sie nicht
+Bibliotheken `eltakobus`, `esp2_gateway_adapter` und `enocean`. Der Marketplace kann sie nicht
 ausliefern, und HA setzt sie bei jedem Core-Update zurück. Das Skript
 [`scripts/patch_libraries.sh`](scripts/patch_libraries.sh) spielt sie automatisch wieder ein:
 
@@ -209,7 +209,7 @@ ausliefern, und HA setzt sie bei jedem Core-Update zurück. Das Skript
 | 2 | esp2_gateway_adapter | `hasattr`-Guard: **USB300-Empfangsthread stürzt nicht mehr ab** |
 | 3 | enocean | Unterdrückt die `XMLParsedAsHTMLWarning` (kosmetisch) |
 | 4 | eltakobus | `write_timeout` 0,1 s → 0,5 s, **weniger Sende-Timeouts** |
-| 5 | – | Optional, nur ohne HACS: stellt Integrationsdateien aus Master-Kopien wieder her (Standard: aus) |
+| 5 | – | Optional, nur ohne Marketplace: stellt Integrationsdateien aus Master-Kopien wieder her (Standard: aus) |
 
 Einrichtung, Voraussetzungen und Ablauf nach einem Core-Update: **[scripts/README.md](scripts/README.md)**
 
@@ -265,4 +265,4 @@ Einrichtung, Voraussetzungen und Ablauf nach einem Core-Update: **[scripts/READM
 | `config_helpers.py` | veränderliche Standardargumente, Merge der `general_settings` |
 | `schema.py` | F6-05-02 als Binary-Sensor-EEP |
 | `switch.py` | `warn` → `warning` |
-| `manifest.json`, `hacs.json` | eigene Version und Repo-URLs für HACS |
+| `manifest.json`, `hacs.json` | eigene Version und Repo-URLs für den Marketplace |

@@ -20,9 +20,9 @@ LOG_FILE="${LOG_FILE:-/config/patch_run.log}"
 exec > "$LOG_FILE" 2>&1
 
 # Fix 5 (Integrationsdateien aus Master-Kopien wiederherstellen) ist nur für
-# Installationen OHNE HACS gedacht. Bei Installation über HACS liefert das
+# Installationen OHNE Marketplace gedacht. Bei Installation über den Marketplace liefert das
 # Release die gepatchten Integrationsdateien bereits mit – dann MUSS Fix 5
-# aus bleiben, sonst werden HACS-Updates durch alte Master-Kopien überschrieben.
+# aus bleiben, sonst werden Marketplace-Updates durch alte Master-Kopien überschrieben.
 RESTORE_INTEGRATION="${RESTORE_INTEGRATION:-0}"
 
 echo "=== Eltako Patches $(date '+%Y-%m-%d %H:%M:%S') ==="
@@ -114,7 +114,7 @@ if require_file "$SERIAL_PY"; then
 fi
 
 # Fix 5 (optional, Standard: AUS): Integrationsdateien aus Master-Kopien
-# wiederherstellen. Nur für manuelle Installation ohne HACS!
+# wiederherstellen. Nur für manuelle Installation ohne Marketplace!
 # Aktivieren mit: RESTORE_INTEGRATION=1 bash /config/patch_libraries.sh
 INT_DIR="/config/custom_components/eltako"
 MASTER_DIR="/config/eltako_patches"
@@ -137,7 +137,7 @@ PATCHED_FILES=(
 )
 
 if [ "$RESTORE_INTEGRATION" != "1" ]; then
-    echo "- Fix 5 (Integration aus Master wiederherstellen) deaktiviert – Integration kommt über HACS"
+    echo "- Fix 5 (Integration aus Master wiederherstellen) deaktiviert – Integration kommt über den Marketplace"
 elif [ ! -d "$INT_DIR" ]; then
     echo "!!! Integrationsordner fehlt: $INT_DIR – Fix 5 übersprungen"
     errors=1

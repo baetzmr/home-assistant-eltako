@@ -10,9 +10,9 @@
 > 📄 **Alle Änderungen im Detail:** [FORK_CHANGES.md](FORK_CHANGES.md)
 > 🔧 **Bibliotheks-Patches (für den stabilen Betrieb notwendig):** [scripts/README.md](scripts/README.md)
 >
-> **Installation über HACS:** *HACS → ⋮ → Benutzerdefinierte Repositories* →
+> **Installation über den Marketplace (ab HA 2026.11):** *Einstellungen → Marketplace → ⋮ → Benutzerdefinierte Repositories* →
 > `https://github.com/baetzmr/home-assistant-eltako`, Typ **Integration**. Die Domain bleibt `eltako`,
-> eine bestehende Konfiguration wird übernommen. Die Original-Integration vorher in HACS entfernen.
+> eine bestehende Konfiguration wird übernommen. Die Original-Integration vorher im Marketplace entfernen.
 >
 > Die folgende Dokumentation stammt aus dem Original-Repository.
 
