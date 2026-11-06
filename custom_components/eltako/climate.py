@@ -104,8 +104,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     _attr_preset_modes = None
     _attr_swing_mode = None
     _attr_swing_modes = None
-    _attr_current_temperature = 0
-    _attr_target_temperature = 0
+    _attr_native_current_temperature = 0
+    _attr_native_target_temperature = 0
     _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE
 
 
@@ -133,7 +133,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         else:
             self._attr_hvac_modes = [HVACMode.HEAT, HVACMode.OFF]
 
-        self._attr_temperature_unit = temp_unit
+        self._attr_native_temperature_unit = temp_unit
         # self._attr_target_temperature_high = max_temp
         # self._attr_target_temperature_low = min_temp
         self._attr_max_temp = max_temp
@@ -153,8 +153,8 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                     if m_str == m_enum.value:
                         self.hvac_modes.append(m_enum)
 
-            self._attr_current_temperature = latest_state.attributes.get('current_temperature', None)
-            self._attr_target_temperature = latest_state.attributes.get('temperature', None)
+            self._attr_native_current_temperature = latest_state.attributes.get('current_temperature', None)
+            self._attr_native_target_temperature = latest_state.attributes.get('temperature', None)
 
             self._attr_hvac_mode = None
             for m_enum in HVACMode:
@@ -164,13 +164,13 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 
         except Exception as e:
             self._attr_hvac_mode = None
-            self._attr_current_temperature = None
-            self._attr_target_temperature = None
+            self._attr_native_current_temperature = None
+            self._attr_native_target_temperature = None
             raise e
         
         self.schedule_update_ha_state()
 
-        LOGGER.debug(f"[climate {self.dev_id}] value initially loaded: [state: {self.state}, modes: [{self.hvac_modes}], current temp: {self.current_temperature}, target temp: {self.target_temperature}]")
+        LOGGER.debug(f"[climate {self.dev_id}] value initially loaded: [state: {self.state}, modes: [{self.hvac_modes}], current temp: {self.native_current_temperature}, target temp: {self.native_target_temperature}]")
 
 
     async def _wrapped_update(self, *args) -> None:
@@ -187,7 +187,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
 
                 # send frequently status update if not connected with thermostat. 
                 if self.thermostat is None:
-                    await self._async_send_command(self._actuator_mode, self.target_temperature)
+                    await self._async_send_command(self._actuator_mode, self.native_target_temperature)
                 
             except Exception as e:
                 LOGGER.exception(e)
@@ -229,7 +229,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     async def async_set_temperature(self, **kwargs) -> None:
         """Set new target temperature."""
 
-        if self._actuator_mode != None and self.current_temperature > 0:
+        if self._actuator_mode is not None and (self.native_current_temperature or 0) > 0:
             new_target_temp = kwargs['temperature']
 
             if self._actuator_mode == A5_10_06.Heater_Mode.OFF:
@@ -247,9 +247,9 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
     def _send_command(self, mode: A5_10_06.Heater_Mode, target_temp: float) -> None:
         """Send command to set target temperature."""
         address, _ = self._sender_id
-        if self.current_temperature and self.target_temperature:
+        if self.native_current_temperature and self.native_target_temperature:
             LOGGER.debug(f"[climate {self.dev_id}] Send status update: current temp: {target_temp}, mode: {mode}")
-            msg = A5_10_06(mode, target_temp, self.current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
+            msg = A5_10_06(mode, target_temp, self.native_current_temperature, self.hvac_action == HVACAction.IDLE).encode_message(address)
             self.send_message(msg)
         else:
             LOGGER.debug(f"[climate {self.dev_id}] Either no current or target temperature is set. Waiting for status update.")
@@ -342,7 +342,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
         if  msg.org == 0x07 and self.dev_eep in [A5_10_06]:
 
             self._actuator_mode = decoded.mode
-            self._attr_current_temperature = decoded.current_temperature
+            self._attr_native_current_temperature = decoded.current_temperature
 
             if decoded.mode == A5_10_06.Heater_Mode.OFF:
                 self._attr_hvac_mode = HVACMode.OFF
@@ -352,7 +352,7 @@ class ClimateController(EltakoEntity, ClimateEntity, RestoreEntity):
                 self._attr_hvac_mode = self._hvac_mode_from_heating
 
             if decoded.mode != A5_10_06.Heater_Mode.OFF:
-                self._attr_target_temperature = round(2*decoded.target_temperature, 0)/2 
+                self._attr_native_target_temperature = round(2*decoded.target_temperature, 0)/2 
 
         self.schedule_update_ha_state()
 

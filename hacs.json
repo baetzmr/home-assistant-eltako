@@ -1,4 +1,5 @@
 {
-  "name": "Eltako (baetzmr)",
+  "name": "Eltako",
+  "homeassistant": "2026.11.0",
   "render_readme": true
 }

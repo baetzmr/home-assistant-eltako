@@ -170,6 +170,11 @@ sauber zwischen Aktor und Thermostat).
 - **Nachrichtenzähler (`Received Messages per Session`):** StateClass `TOTAL_INCREASING` →
   `MEASUREMENT`, ungültige Unit-Felder wurden entfernt. Der Zähler beginnt pro Sitzung bei 0,
   was mit `TOTAL_INCREASING` zu falschen Statistiken führte.
+- **Klima-Controller – `native_*`-Temperaturen (HA 2026.11):** `_attr_current_temperature`,
+  `_attr_target_temperature` und `_attr_temperature_unit` heißen jetzt `_attr_native_*`, auch
+  die Lesezugriffe nutzen `native_current_temperature` / `native_target_temperature`. Die alten
+  Namen fallen mit HA 2027.11 weg. `async_set_temperature` stürzt nicht mehr mit `TypeError`
+  ab, wenn noch keine Ist-Temperatur bekannt ist. **Mindestversion: HA 2026.11.0** (`hacs.json`).
 
 ---
 

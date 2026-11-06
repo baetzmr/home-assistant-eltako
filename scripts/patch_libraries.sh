@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# Eltako Integration (baetzmr fork) – Bibliotheks-Patches
+# Eltako Integration (Fork) – Bibliotheks-Patches
 # =============================================================================
 # Patcht drei Python-Bibliotheken, die Home Assistant für die Eltako-
 # Integration installiert (eltakobus, esp2_gateway_adapter, enocean).

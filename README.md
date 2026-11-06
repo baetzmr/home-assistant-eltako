@@ -1,4 +1,4 @@
-> ## ℹ️ Fork von baetzmr
+> ## ℹ️ Fork
 >
 > Dies ist ein **gepatchter Fork** von [grimmpp/home-assistant-eltako](https://github.com/grimmpp/home-assistant-eltako)
 > auf Basis von `v1.5.10-bugfix-covers`. Er ist im Dauerbetrieb mit FGW14-USB und USB300 unter HA Core 2026.x im Einsatz.
