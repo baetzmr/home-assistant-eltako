@@ -628,10 +628,25 @@ class EltakoWeatherStation(EltakoSensor):
 
     def value_changed(self, msg: ESP2Message):
         """Update the internal state of the sensor."""
+        # Vorfilter für 4BS-Telegramme (A5-13-xx):
+        # - LRN-Bit DB0.3 = 0 -> Teach-in, kein Datentelegramm
+        # - Identifier (DB0 Bit 7..4) wird nur für 0x01 (Wetter) und 0x02 (Sonne)
+        #   ausgewertet; andere Identifier (z.B. 0x00 vom FWS61) kann eltakobus
+        #   nicht dekodieren (NotImplementedError) und werden hier verworfen.
+        _data = getattr(msg, "data", None)
+        if getattr(msg, "org", None) == 0x07 and isinstance(_data, (bytes, bytearray)) and len(_data) == 4:
+            if not (_data[3] & 0x08):
+                LOGGER.debug("[Weather Station %s] Teach-in telegram ignored: %s", self.dev_id, msg)
+                return
+            _identifier = _data[3] >> 4
+            if _identifier not in (0x01, 0x02):
+                LOGGER.debug("[Weather Station %s] Telegram with unsupported identifier 0x%02X ignored: %s", self.dev_id, _identifier, msg)
+                return
+
         try:
             decoded = self.dev_eep.decode_message(msg)
         except Exception as e:
-            LOGGER.warning("[Weather Station %s] Could not decode message: %s", self.dev_id, str(e))
+            LOGGER.warning("[Weather Station %s] Could not decode message: %s %r | msg=%r", self.dev_id, type(e).__name__, e, msg)
             return
 
         if decoded.learn_button != 1:
